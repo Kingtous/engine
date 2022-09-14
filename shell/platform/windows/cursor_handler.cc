@@ -11,6 +11,7 @@
 static constexpr char kChannelName[] = "flutter/mousecursor";
 
 static constexpr char kActivateSystemCursorMethod[] = "activateSystemCursor";
+static constexpr char kSetSystemCursorMethod[] = "setSystemCursor";
 
 static constexpr char kKindKey[] = "kind";
 
@@ -44,6 +45,63 @@ void CursorHandler::HandleMethodCall(
     }
     const auto& kind = std::get<std::string>(kind_iter->second);
     delegate_->UpdateFlutterCursor(kind);
+    result->Success();
+  } else if (method.compare(kSetSystemCursorMethod) == 0) {
+    const auto& map = std::get<EncodableMap>(*method_call.arguments());
+    auto buffer = std::get<std::vector<uint8_t>>(
+        map.at(flutter::EncodableValue("buffer")));
+    auto key = std::get<std::string>(map.at(flutter::EncodableValue("key")));
+    auto scale_x = std::get<int>(map.at(flutter::EncodableValue("scale_x")));
+    auto scale_y = std::get<int>(map.at(flutter::EncodableValue("scale_y")));
+    auto x = std::get<double>(map.at(flutter::EncodableValue("x")));
+    auto y = std::get<double>(map.at(flutter::EncodableValue("y")));
+    auto length = std::get<int>(map.at(flutter::EncodableValue("length")));
+    HCURSOR cursor = nullptr;
+    if (!key.empty() && length == 0) {
+      // look for cache
+      auto it = delegate_->cache_.begin();
+      while (it != delegate_->cache_.end()) {
+        if ((*it).first == key) {
+          cursor = (*it).second;
+          break;
+        }
+        it++;
+      }
+    }
+    if (cursor == nullptr) {
+      // 32-> argb
+      auto bitmap = CreateBitmap(scale_x, scale_y, 1, 32, &buffer[0]);
+      if (bitmap == nullptr) {
+        result->Error("Argument error", "Invalid bitmap from flutter");
+        return;
+      }
+      ICONINFO ii;
+      ii.fIcon = 0;
+      ii.xHotspot = x;
+      ii.yHotspot = y;
+      ii.hbmMask = bitmap;
+      ii.hbmColor = bitmap;
+      cursor = CreateIconIndirect(&ii);
+      if (!key.empty()) {
+        delegate_->cache_.emplace_back(std::make_pair(key, cursor));
+      }
+      DeleteObject(bitmap);
+    }
+    delegate_->SetFlutterCursor(cursor);
+    result->Success();
+  } else if (method.compare("freeCache") == 0){
+    const auto& map = std::get<EncodableMap>(*method_call.arguments());
+    auto key = std::get<std::string>(map.at(flutter::EncodableValue("key")));
+    auto it = delegate_->cache_.begin();
+    while(it != delegate_->cache_.end()){
+      if ((*it).first == key) {
+        break;
+      }
+      it++;
+    }
+    if (it != delegate_->cache_.end()) {
+      delegate_->cache_.erase(it);
+    }
     result->Success();
   } else {
     result->NotImplemented();

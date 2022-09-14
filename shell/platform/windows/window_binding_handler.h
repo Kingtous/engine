@@ -9,6 +9,7 @@
 
 #include <string>
 #include <variant>
+#include <vector>
 
 #include "flutter/shell/platform/common/geometry.h"
 #include "flutter/shell/platform/windows/public/flutter_windows.h"
@@ -71,6 +72,9 @@ class WindowBindingHandler {
   // content. See mouse_cursor.dart for the values and meanings of cursor_name.
   virtual void UpdateFlutterCursor(const std::string& cursor_name) = 0;
 
+  // Sets the cursor from path
+  virtual void SetFlutterCursor(HCURSOR cursor) = 0;
+
   // Invoked when the cursor/composing rect has been updated in the framework.
   virtual void OnCursorRectUpdated(const Rect& rect) = 0;
 
@@ -89,6 +93,10 @@ class WindowBindingHandler {
   // Returns the last known position of the primary pointer in window
   // coordinates.
   virtual PointerLocation GetPrimaryPointerLocation() = 0;
+
+
+  // Custom Cursor Cache
+  std::vector<std::pair<std::string, HCURSOR>> cache_;
 };
 
 }  // namespace flutter
