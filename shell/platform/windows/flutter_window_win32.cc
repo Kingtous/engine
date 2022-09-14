@@ -102,6 +102,10 @@ void FlutterWindowWin32::UpdateFlutterCursor(const std::string& cursor_name) {
   current_cursor_ = GetCursorByName(cursor_name);
 }
 
+void FlutterWindowWin32::SetFlutterCursor(HCURSOR cursor) {
+  current_cursor_ = cursor;
+}
+
 void FlutterWindowWin32::OnWindowResized() {
   // Blocking the raster thread until DWM flushes alleviates glitches where
   // previous size surface is stretched over current size view.
