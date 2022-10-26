@@ -58,20 +58,63 @@ void CursorHandler::HandleMethodCall(
     auto length = std::get<int>(map.at(flutter::EncodableValue("length")));
     HCURSOR cursor = nullptr;
     // 32-> argb
-    auto bitmap = CreateBitmap(scale_x, scale_y, 1, 32, &buffer[0]);
+    HDC display_dc = GetDC(0);
+    BITMAPINFO bmi;
+    memset(&bmi, 0, sizeof(bmi));
+    bmi.bmiHeader.biSize        = sizeof(BITMAPINFOHEADER);
+    bmi.bmiHeader.biWidth       = scale_x;
+    bmi.bmiHeader.biHeight      = -scale_y;
+    bmi.bmiHeader.biPlanes      = 1;
+    bmi.bmiHeader.biBitCount    = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    bmi.bmiHeader.biSizeImage   = scale_x * scale_y * 4;
+    // Create the pixmap
+    uint8_t *pixels = 0;
+    HBITMAP bitmap = CreateDIBSection(display_dc, &bmi, DIB_RGB_COLORS, (void **) &pixels, 0, 0);
+    ReleaseDC(0, display_dc);
+    if (!bitmap) {
+        result->Error("bitmap error","create dib section failed");
+        return;
+    }
+    if (!pixels) {
+        result->Error("bitmap error","did not allocate pixel data");
+        return;
+    }
+    int bytes_per_line = scale_x * 4;
+    for (int y=0; y<scale_y; ++y)
+      memcpy(pixels + y * bytes_per_line, &buffer[bytes_per_line * y] , bytes_per_line);
+
+    // auto bitmap = CreateBitmap(scale_x, scale_y, 1, 32, &buffer[0]);
     if (bitmap == nullptr) {
       result->Error("Argument error", "Invalid rawRgba bitmap from flutter");
       return;
     }
+    auto len = scale_x*scale_y;
+    uint8_t* bits = new uint8_t[len * 4];
+    for(auto i =0; i<len;i++){
+      auto base = i*4; // rgba
+      if (buffer[base] > 0 || buffer[base+1] >0 || buffer[base + 2] > 0 || buffer[base + 3] > 0) {
+        bits[base] = 0xFF;
+        bits[base + 1] = 0xFF;
+        bits[base + 2] = 0xFF;
+        bits[base + 3] = 0xFF;
+      } else {
+        bits[base] = 0x0;
+        bits[base + 1] = 0x0;
+        bits[base + 2] = 0x0;
+        bits[base + 3] = 0x0;
+      }
+    }
+    HBITMAP mask = CreateBitmap(scale_x, scale_y, 1, 32, bits);
     ICONINFO ii;
     ii.fIcon = 0;
     ii.xHotspot = x;
     ii.yHotspot = y;
-    ii.hbmMask = bitmap;
+    ii.hbmMask = mask;
     ii.hbmColor = bitmap;
     cursor = CreateIconIndirect(&ii);
-    DeleteObject(bitmap);
     delegate_->SetFlutterCursor(cursor);
+    delete[] bits;
     result->Success();
   } else {
     result->NotImplemented();
