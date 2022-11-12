@@ -141,6 +141,7 @@ void CursorHandler::HandleMethodCall(
     HBITMAP andMask;
     HBITMAP xorMask;
     GetMaskBitmaps(bitmap, RGB(0, 0, 0), andMask, xorMask);
+    DeleteObject(bitmap);
     ICONINFO ii;
     ii.fIcon = 0;
     ii.xHotspot = x;
@@ -148,6 +149,8 @@ void CursorHandler::HandleMethodCall(
     ii.hbmMask = andMask;
     ii.hbmColor = xorMask;
     cursor = CreateIconIndirect(&ii);
+    DeleteObject(andMask);
+    DeleteObject(xorMask);
     delegate_->SetFlutterCursor(cursor);
     result->Success();
   } else {
