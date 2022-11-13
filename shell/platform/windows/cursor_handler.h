@@ -11,6 +11,9 @@
 #include "flutter/shell/platform/windows/public/flutter_windows.h"
 #include "flutter/shell/platform/windows/window_binding_handler.h"
 
+#include <string>
+#include <vector>
+
 namespace flutter {
 
 // Handler for the cursor system channel.
@@ -30,6 +33,12 @@ class CursorHandler {
 
   // The delegate for cursor updates.
   WindowBindingHandler* delegate_;
+
+  // The cache of cursor
+  std::vector<std::pair<std::string, HCURSOR>> cursor_cache_;
+
+  // The last cursor key to be set
+  std::string last_cursor_key;
 };
 
 }  // namespace flutter

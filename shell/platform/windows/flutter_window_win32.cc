@@ -101,6 +101,10 @@ void FlutterWindowWin32::UpdateFlutterCursor(const std::string& cursor_name) {
   current_cursor_ = GetCursorByName(cursor_name);
 }
 
+HCURSOR FlutterWindowWin32::GetFlutterCursor() {
+  return this->current_cursor_;
+}
+
 void FlutterWindowWin32::SetFlutterCursor(HCURSOR cursor) {
   current_cursor_ = cursor;
 }

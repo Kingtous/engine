@@ -12,6 +12,7 @@ static constexpr char kChannelName[] = "flutter/mousecursor";
 
 static constexpr char kActivateSystemCursorMethod[] = "activateSystemCursor";
 static constexpr char kSetSystemCursorMethod[] = "setSystemCursor";
+static constexpr char kClearSystemCursor[] = "freeCache";
 
 static constexpr char kKindKey[] = "kind";
 
@@ -104,55 +105,121 @@ void CursorHandler::HandleMethodCall(
     auto y = std::get<double>(map.at(flutter::EncodableValue("y")));
     auto length = std::get<int>(map.at(flutter::EncodableValue("length")));
     HCURSOR cursor = nullptr;
-    // 32-> argb
-    HDC display_dc = GetDC(0);
-    BITMAPINFO bmi;
-    memset(&bmi, 0, sizeof(bmi));
-    bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    bmi.bmiHeader.biWidth = scale_x;
-    bmi.bmiHeader.biHeight = -scale_y;
-    bmi.bmiHeader.biPlanes = 1;
-    bmi.bmiHeader.biBitCount = 32;
-    bmi.bmiHeader.biCompression = BI_RGB;
-    bmi.bmiHeader.biSizeImage = scale_x * scale_y * 4;
-    // Create the pixmap
-    uint8_t* pixels = 0;
-    HBITMAP bitmap = CreateDIBSection(display_dc, &bmi, DIB_RGB_COLORS,
-                                      (void**)&pixels, 0, 0);
-    ReleaseDC(0, display_dc);
-    if (!bitmap) {
-      result->Error("bitmap error", "create dib section failed");
-      return;
+    if (!key.empty()) {
+      auto it = cursor_cache_.begin();
+      while (it != cursor_cache_.end()) {
+        if (it->first.compare(key) == 0) {
+          break;
+        }
+        it++;
+      }
+      if (it != cursor_cache_.end()) {
+        cursor = it->second;
+      }
     }
-    if (!pixels) {
-      result->Error("bitmap error", "did not allocate pixel data");
-      return;
-    }
-    int bytes_per_line = scale_x * 4;
-    for (int y = 0; y < scale_y; ++y)
-      memcpy(pixels + y * bytes_per_line, &buffer[bytes_per_line * y],
-             bytes_per_line);
+    if (cursor == nullptr && !buffer.empty()) {
+      // 32-> argb
+      HDC display_dc = GetDC(0);
+      BITMAPINFO bmi;
+      memset(&bmi, 0, sizeof(bmi));
+      bmi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+      bmi.bmiHeader.biWidth = scale_x;
+      bmi.bmiHeader.biHeight = -scale_y;
+      bmi.bmiHeader.biPlanes = 1;
+      bmi.bmiHeader.biBitCount = 32;
+      bmi.bmiHeader.biCompression = BI_RGB;
+      bmi.bmiHeader.biSizeImage = scale_x * scale_y * 4;
+      // Create the pixmap
+      uint8_t* pixels = 0;
+      HBITMAP bitmap = CreateDIBSection(display_dc, &bmi, DIB_RGB_COLORS,
+                                        (void**)&pixels, 0, 0);
+      ReleaseDC(0, display_dc);
+      if (!bitmap) {
+        result->Error("bitmap error", "create dib section failed");
+        return;
+      }
+      if (!pixels) {
+        result->Error("bitmap error", "did not allocate pixel data");
+        return;
+      }
+      int bytes_per_line = scale_x * 4;
+      for (int y = 0; y < scale_y; ++y)
+        memcpy(pixels + y * bytes_per_line, &buffer[bytes_per_line * y],
+               bytes_per_line);
 
-    // auto bitmap = CreateBitmap(scale_x, scale_y, 1, 32, &buffer[0]);
-    if (bitmap == nullptr) {
-      result->Error("Argument error", "Invalid rawRgba bitmap from flutter");
-      return;
+      // auto bitmap = CreateBitmap(scale_x, scale_y, 1, 32, &buffer[0]);
+      if (bitmap == nullptr) {
+        result->Error("Argument error", "Invalid rawRgba bitmap from flutter");
+        return;
+      }
+      HBITMAP andMask;
+      HBITMAP xorMask;
+      GetMaskBitmaps(bitmap, RGB(0, 0, 0), andMask, xorMask);
+      DeleteObject(bitmap);
+      ICONINFO ii;
+      ii.fIcon = 0;
+      ii.xHotspot = x;
+      ii.yHotspot = y;
+      ii.hbmMask = andMask;
+      ii.hbmColor = xorMask;
+      cursor = CreateIconIndirect(&ii);
+      DeleteObject(andMask);
+      DeleteObject(xorMask);
+      if (cursor != nullptr && !key.empty()) {
+        cursor_cache_.emplace_back(std::make_pair(key, cursor));
+      }
     }
-    HBITMAP andMask;
-    HBITMAP xorMask;
-    GetMaskBitmaps(bitmap, RGB(0, 0, 0), andMask, xorMask);
-    DeleteObject(bitmap);
-    ICONINFO ii;
-    ii.fIcon = 0;
-    ii.xHotspot = x;
-    ii.yHotspot = y;
-    ii.hbmMask = andMask;
-    ii.hbmColor = xorMask;
-    cursor = CreateIconIndirect(&ii);
-    DeleteObject(andMask);
-    DeleteObject(xorMask);
-    delegate_->SetFlutterCursor(cursor);
-    result->Success();
+    if (cursor != nullptr) {
+      delegate_->SetFlutterCursor(cursor);
+      result->Success();
+    } else {
+      result->Error("set cursor failed", "cursor == null");
+    }
+  } else if (method.compare(kClearSystemCursor) == 0) {
+    const auto& map = std::get<EncodableMap>(*method_call.arguments());
+    auto key = std::get<std::string>(map.at(flutter::EncodableValue("key")));
+    auto it = cursor_cache_.begin();
+    while (it != cursor_cache_.end()) {
+      if (it->first.compare(key) == 0) {
+        break;
+      }
+      it++;
+    }
+    if (it == cursor_cache_.end()) {
+      result->Success(flutter::EncodableValue(false));
+    } else {
+      cursor_cache_.erase(it);
+      result->Success(flutter::EncodableValue(true));
+    }
+  } else if (method.compare("lastCursorKey") == 0) {
+    // check current cursor
+    auto it = cursor_cache_.begin();
+    while (it != cursor_cache_.end()) {
+      if (it->first.compare(last_cursor_key) == 0) {
+        break;
+      }
+      it++;
+    }
+    if (it == cursor_cache_.end()) {
+      result->Success(flutter::EncodableValue(""));
+    } else {
+      if (it->second == delegate_->GetFlutterCursor()) {
+        result->Success(flutter::EncodableValue(last_cursor_key));
+      } else {
+        result->Success(flutter::EncodableValue(""));
+      }
+    }
+  } else if (method.compare("getCacheKeyList") == 0) {
+    auto list = flutter::EncodableList();
+    auto it = cursor_cache_.begin();
+    while (it != cursor_cache_.end()) {
+      list.emplace_back(flutter::EncodableValue(it->first));
+      printf("%s", it->first.c_str());
+      it++;
+    }
+    result->Success(flutter::EncodableValue(list));
+  } else if (method.compare("clearAll") == 0) {
+    cursor_cache_.clear();
   } else {
     result->NotImplemented();
   }

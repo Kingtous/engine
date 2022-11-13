@@ -85,6 +85,9 @@ class WindowBindingHandler {
   // Sets the cursor from path
   virtual void SetFlutterCursor(HCURSOR cursor) = 0;
 
+  // Gets current cursor
+  virtual HCURSOR GetFlutterCursor();
+
   // Invoked when the cursor/composing rect has been updated in the framework.
   virtual void OnCursorRectUpdated(const Rect& rect) = 0;
 
