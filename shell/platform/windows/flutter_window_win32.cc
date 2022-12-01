@@ -107,6 +107,11 @@ void FlutterWindowWin32::OnWindowResized() {
   DwmFlush();
 }
 
+void FlutterWindowWin32::SetFlutterCursor(HCURSOR cursor) {
+  current_cursor_ = cursor;
+  ::SetCursor(current_cursor_);
+}
+
 // Translates button codes from Win32 API to FlutterPointerMouseButtons.
 static uint64_t ConvertWinButtonToFlutterButton(UINT button) {
   switch (button) {

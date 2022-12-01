@@ -2143,18 +2143,7 @@ FILE: ../../../flutter/shell/platform/windows/client_wrapper/include/flutter/plu
 FILE: ../../../flutter/shell/platform/windows/client_wrapper/plugin_registrar_windows_unittests.cc
 FILE: ../../../flutter/shell/platform/windows/cursor_handler.cc
 FILE: ../../../flutter/shell/platform/windows/cursor_handler.h
-FILE: ../../../flutter/shell/platform/windows/display_helper_winuwp.cc
-FILE: ../../../flutter/shell/platform/windows/display_helper_winuwp.h
-FILE: ../../../flutter/shell/platform/windows/dpi_utils_win32.cc
-FILE: ../../../flutter/shell/platform/windows/dpi_utils_win32.h
-FILE: ../../../flutter/shell/platform/windows/dpi_utils_win32_unittests.cc
-FILE: ../../../flutter/shell/platform/windows/external_texture_gl.cc
-FILE: ../../../flutter/shell/platform/windows/external_texture_gl.h
-FILE: ../../../flutter/shell/platform/windows/flutter_key_map.cc
-FILE: ../../../flutter/shell/platform/windows/flutter_platform_node_delegate_win32.cc
-FILE: ../../../flutter/shell/platform/windows/flutter_platform_node_delegate_win32.h
-FILE: ../../../flutter/shell/platform/windows/flutter_platform_node_delegate_winuwp.cc
-FILE: ../../../flutter/shell/platform/windows/flutter_platform_node_delegate_winuwp.h
+FILE: ../../../flutter/shell/platform/windows/cursor_handler_unittests.cc
 FILE: ../../../flutter/shell/platform/windows/flutter_project_bundle.cc
 FILE: ../../../flutter/shell/platform/windows/flutter_project_bundle.h
 FILE: ../../../flutter/shell/platform/windows/flutter_project_bundle_unittests.cc
@@ -3344,5 +3333,4 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-====================================================================================================
 Total license count: 16
